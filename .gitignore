@@ -15,3 +15,7 @@
 .externalNativeBuild
 .cxx
 custom-game-area/image.jpg
+
+# LLM spike artifacts (screenshots and API results contain local data)
+llm-spike/screenshots/
+llm-spike/results/

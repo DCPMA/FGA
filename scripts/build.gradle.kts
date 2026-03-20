@@ -14,6 +14,11 @@ dependencies {
     implementation(libs.dagger.hilt.core)
     ksp(libs.dagger.hilt.compiler)
 
+    // LLM service dependencies
+    implementation(libs.okhttp)
+    implementation(libs.google.gson)
+    implementation(libs.kotlinx.coroutines.core)
+
     testImplementation(platform(libs.junit.bom)) {
         because("kotlin-test comes with conflicting junit versions")
     }
