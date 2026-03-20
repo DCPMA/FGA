@@ -3,11 +3,9 @@ package io.github.fate_grand_automata.scripts.llm
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
-import assertk.assertions.isGreaterThan
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotEmpty
 import assertk.assertions.isNotNull
-import com.google.gson.Gson
 import com.google.gson.JsonParser
 import java.lang.reflect.InvocationTargetException
 import kotlin.test.Test
@@ -20,8 +18,6 @@ import kotlin.test.assertFailsWith
  * For live API testing, use the shell script: llm-spike/run-spike.sh
  */
 class OpenRouterLlmServiceTest {
-
-    private val gson = Gson()
 
     @Test
     fun `parseResponse correctly handles a valid battle screen response`() {

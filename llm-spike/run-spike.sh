@@ -59,25 +59,35 @@ analyze_screenshot() {
 
     echo "  Analyzing with model: $model"
 
-    # Base64 encode the screenshot
-    local base64_data
-    base64_data=$(base64 -i "$screenshot_path" | tr -d '\n')
+    # Base64 encode the screenshot to a temp file (avoids ARG_MAX overflow for large screenshots)
+    # Uses portable base64 invocation (no flags) that works on both macOS and Linux
+    local base64_file
+    base64_file=$(mktemp)
+    base64 < "$screenshot_path" | tr -d '\n' > "$base64_file"
+    trap "rm -f '$base64_file'" RETURN
 
-    # Build the system prompt (JSON-escaped)
-    local system_prompt
-    system_prompt=$(python3 -c "
-import json
-prompt = '''You are an expert game screen analyzer for Fate/Grand Order (FGO), a mobile RPG game.
+    # Build the request JSON; Python reads the base64 file to avoid command-line size limits
+    local request_json
+    request_json=$(python3 - "$model" "$base64_file" <<'PYEOF'
+import json, sys
+
+model = sys.argv[1]
+base64_file = sys.argv[2]
+
+with open(base64_file) as f:
+    base64_data = f.read()
+
+system_prompt = """You are an expert game screen analyzer for Fate/Grand Order (FGO), a mobile RPG game.
 Your job is to identify the current game screen from a screenshot and provide structured information.
 
 You MUST respond with ONLY a valid JSON object (no markdown, no explanation outside JSON) matching this exact schema:
 
 {
-  \"screen_type\": \"<one of: HOME, QUEST_SELECT, EVENT, SUPPORT_SELECT, PARTY_SETUP, BATTLE, CARD_SELECT, QUEST_REWARD, BOND_RESULT, MASTER_EXP, SUMMON, PRESENT_BOX, SHOP, ENHANCEMENT, DIALOG, LOADING, LOGIN_REWARD, AP_REFILL, ERROR, UNKNOWN>\",
-  \"confidence\": <number from 0.0 to 1.0>,
-  \"description\": \"<brief description of what is currently shown on screen>\",
-  \"visible_elements\": [\"<list of UI elements visible on screen>\"],
-  \"suggested_actions\": [\"<list of actions a player could take on this screen>\"]
+  "screen_type": "<one of: HOME, QUEST_SELECT, EVENT, SUPPORT_SELECT, PARTY_SETUP, BATTLE, CARD_SELECT, QUEST_REWARD, BOND_RESULT, MASTER_EXP, SUMMON, PRESENT_BOX, SHOP, ENHANCEMENT, DIALOG, LOADING, LOGIN_REWARD, AP_REFILL, ERROR, UNKNOWN>",
+  "confidence": <number from 0.0 to 1.0>,
+  "description": "<brief description of what is currently shown on screen>",
+  "visible_elements": ["<list of UI elements visible on screen>"],
+  "suggested_actions": ["<list of actions a player could take on this screen>"]
 }
 
 Key screen identification rules:
@@ -97,20 +107,14 @@ Key screen identification rules:
 - LOADING: Loading screen with progress indicator or Now Loading text.
 
 Be precise. If you see battle UI elements (HP bars, skill icons, BATTLE text), it is BATTLE, not CARD_SELECT.
-If you see command cards for selection, it is CARD_SELECT.'''
-print(json.dumps(prompt))
-")
+If you see command cards for selection, it is CARD_SELECT."""
 
-    # Build the request JSON
-    local request_json
-    request_json=$(python3 -c "
-import json
 data = {
-    'model': '$model',
+    'model': model,
     'messages': [
         {
             'role': 'system',
-            'content': $system_prompt
+            'content': system_prompt
         },
         {
             'role': 'user',
@@ -122,7 +126,7 @@ data = {
                 {
                     'type': 'image_url',
                     'image_url': {
-                        'url': 'data:image/png;base64,$base64_data'
+                        'url': f'data:image/png;base64,{base64_data}'
                     }
                 }
             ]
@@ -132,7 +136,8 @@ data = {
     'temperature': 0.1
 }
 print(json.dumps(data))
-")
+PYEOF
+    )
 
     local result_file="$RESULTS_DIR/${screenshot_name}_${model//\//_}_${TIMESTAMP}.json"
 

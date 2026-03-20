@@ -2,12 +2,8 @@ package io.github.fate_grand_automata.scripts.llm
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotEmpty
 import assertk.assertions.isNotNull
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
 import kotlin.test.Test
 
 /**

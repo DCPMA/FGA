@@ -2,6 +2,8 @@ package io.github.fate_grand_automata.scripts.llm
 
 import com.google.gson.Gson
 import com.google.gson.JsonParser
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -61,19 +63,22 @@ class OpenRouterLlmService(
 
         val timeMark = TimeSource.Monotonic.markNow()
 
-        val response = client.newCall(request).execute()
-        val latencyMs = timeMark.elapsedNow().inWholeMilliseconds
+        return withContext(Dispatchers.IO) {
+            client.newCall(request).execute().use { response ->
+                val latencyMs = timeMark.elapsedNow().inWholeMilliseconds
 
-        val responseBody = response.body?.string()
-            ?: throw LlmServiceException("Empty response body from OpenRouter")
+                val responseBody = response.body?.string()
+                    ?: throw LlmServiceException("Empty response body from OpenRouter")
 
-        if (!response.isSuccessful) {
-            throw LlmServiceException(
-                "OpenRouter API error ${response.code}: $responseBody"
-            )
+                if (!response.isSuccessful) {
+                    throw LlmServiceException(
+                        "OpenRouter API error ${response.code}: $responseBody"
+                    )
+                }
+
+                parseResponse(responseBody, model, latencyMs)
+            }
         }
-
-        return parseResponse(responseBody, model, latencyMs)
     }
 
     private fun buildRequestBody(screenshotBase64: String, model: String): String {
@@ -139,17 +144,17 @@ class OpenRouterLlmService(
             ?: throw LlmServiceException("No message content in response: $responseBody")
 
         // Parse the JSON from the LLM's response
-        // Strip markdown code fences if present
+        // Strip markdown code fences if present (handles ```json, ```JSON, ``` with optional whitespace)
         val cleanedContent = messageContent
-            .replace(Regex("^```json\\s*", RegexOption.MULTILINE), "")
-            .replace(Regex("^```\\s*$", RegexOption.MULTILINE), "")
+            .replace(Regex("^\\s*```[a-zA-Z]*\\s*$", RegexOption.MULTILINE), "")
             .trim()
 
         val resultJson = try {
             JsonParser.parseString(cleanedContent).asJsonObject
         } catch (e: Exception) {
             throw LlmServiceException(
-                "Failed to parse LLM JSON response: ${e.message}\nRaw: $messageContent"
+                "Failed to parse LLM JSON response: ${e.message}\nRaw: $messageContent",
+                cause = e
             )
         }
 
