@@ -126,9 +126,17 @@ class BattleScreenLocations @Inject constructor(
      */
     fun cooldownTextRegion(skill: Skill.Servant) =
         when (gameServer) {
-            is GameServer.Tw -> Region(-80, 40, 180, 55)
+            is GameServer.Tw -> Region(-5, 40, 100, 55)
             else -> Region(8, 108, 96, 48)
         } + locate(skill)
+
+    // The TW fixed prefix starts to the left of the skill click position.
+    // Keep its wider match area separate so OCR retains its existing input.
+    fun cooldownGlyphRegion(skill: Skill.Servant) =
+        when (gameServer) {
+            is GameServer.Tw -> Region(-80, 40, 180, 55) + locate(skill)
+            else -> cooldownTextRegion(skill)
+        }
 
     val servantDetailsInfoClick = Location(-660, 110).xFromCenter()
     

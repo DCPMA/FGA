@@ -96,14 +96,12 @@ class SkillSpam @Inject constructor(
     private fun hasCooldownText(skill: Skill.Servant): Boolean {
         val region = locations.battle.cooldownTextRegion(skill)
 
-        // Primary (TW only): template-match the `剩` cooldown glyph.
-        // The glyph is rendered as part of `剩餘 N` below the icon on TW;
-        // the template-match sidesteps OCR's failure mode on thin "1"
-        // digits (see .auto-dev/investigation/ocr-report.md). Asset is only
-        // bundled under assets/Tw, so guard the lookup to avoid hitting the
-        // En fallback (which has no asset).
+        // TW: match the fixed 剩餘 prefix using its own image-scale region.
+        // Leave the existing OCR region below unchanged. Only TW has this
+        // template asset, so keep the lookup inside the server guard.
         if (prefs.gameServer is GameServer.Tw) {
-            if (region.detectOutlinedTextHasMatch(
+            val glyphRegion = locations.battle.cooldownGlyphRegion(skill)
+            if (glyphRegion.detectOutlinedTextHasMatch(
                     images[Images.CooldownText],
                     similarity = COOLDOWN_GLYPH_SIMILARITY
                 )
