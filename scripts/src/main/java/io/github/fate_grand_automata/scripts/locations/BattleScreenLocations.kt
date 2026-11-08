@@ -116,8 +116,19 @@ class BattleScreenLocations @Inject constructor(
     fun imageRegion(skill: Skill.Servant) =
         Region(22, 28, 30, 30) + locate(skill)
 
+    /**
+     * Region of the "skill on cooldown" text shown next to/under the skill icon.
+     *
+     * TW renders `剩餘 N` below the icon, so we target that band there.
+     * Other servers keep the previous region; rendering layouts differ
+     * (number-on-icon on EN, `残り N` on JP, etc.) and tweaking them is out of
+     * scope for this fix.
+     */
     fun cooldownTextRegion(skill: Skill.Servant) =
-        Region(8, 108, 96, 48) + locate(skill)
+        when (gameServer) {
+            is GameServer.Tw -> Region(-5, 40, 100, 55)
+            else -> Region(8, 108, 96, 48)
+        } + locate(skill)
 
     val servantDetailsInfoClick = Location(-660, 110).xFromCenter()
     

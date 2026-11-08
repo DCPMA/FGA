@@ -1,6 +1,8 @@
 package io.github.fate_grand_automata.scripts.modules
 
 import io.github.fate_grand_automata.scripts.IFgoAutomataApi
+import io.github.fate_grand_automata.scripts.Images
+import io.github.fate_grand_automata.scripts.enums.GameServer
 import io.github.fate_grand_automata.scripts.models.FieldSlot
 import io.github.fate_grand_automata.scripts.models.ServantTarget
 import io.github.fate_grand_automata.scripts.models.SkillSpamConfig
@@ -26,6 +28,15 @@ class SkillSpam @Inject constructor(
         val skillSpamDelay = 0.25.seconds
         val skillReadyRecheckDelay = 0.1.seconds
         val cooldownRegex = Regex("""\d+""")
+
+        /**
+         * Similarity threshold for the `剩` cooldown-glyph template match.
+         * Validated empirically (Experiment D v3, see
+         * .auto-dev/investigation/ocr-report.md): 27/27 cells classified
+         * correctly across mixed-state captures with a safe margin of 0.092.
+         * 0.25 sits in the middle of the safe band 0.20..0.30.
+         */
+        const val COOLDOWN_GLYPH_SIMILARITY = 0.25
     }
 
     fun spamSkills() {
@@ -86,7 +97,27 @@ class SkillSpam @Inject constructor(
     }
 
     private fun hasCooldownText(skill: Skill.Servant): Boolean {
-        val text = locations.battle.cooldownTextRegion(skill)
+        val region = locations.battle.cooldownTextRegion(skill)
+
+        // Primary (TW only): template-match the `剩` cooldown glyph.
+        // The glyph is rendered as part of `剩餘 N` below the icon on TW;
+        // the template-match sidesteps OCR's failure mode on thin "1"
+        // digits (see .auto-dev/investigation/ocr-report.md). Asset is only
+        // bundled under assets/Tw, so guard the lookup to avoid hitting the
+        // En fallback (which has no asset).
+        if (prefs.gameServer is GameServer.Tw) {
+            if (region.detectOutlinedTextHasMatch(
+                    images[Images.CooldownText],
+                    similarity = COOLDOWN_GLYPH_SIMILARITY
+                )
+            ) {
+                return true
+            }
+        }
+
+        // Fallback: OCR-based check. Preserves prior behaviour on EN/JP/KR/CN
+        // and acts as a safety net on TW when the template match misses.
+        val text = region
             .detectText(outlinedText = true)
             .replace('O', '0')
             .replace('o', '0')

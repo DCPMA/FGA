@@ -62,6 +62,14 @@ interface AutomataApi {
 
     fun Region.detectText(outlinedText: Boolean = false): String
 
+    /**
+     * Checks whether the binarised, fillText'd content of this region contains a
+     * match for the given outlined-text template. Resizes the source up to fit
+     * the template if needed (mirrors the validated harness pipeline). Cheaper
+     * and more reliable than OCR for fixed-glyph cooldown / state indicators.
+     */
+    fun Region.detectOutlinedTextHasMatch(template: Pattern, similarity: Double): Boolean
+
     fun Map<Pattern, Region>.exists(
         timeout: Duration = Duration.ZERO,
         similarity: Double? = null,

@@ -71,6 +71,28 @@ class StandardAutomataApi @Inject constructor(
             }
     }
 
+    override fun Region.detectOutlinedTextHasMatch(template: Pattern, similarity: Double): Boolean {
+        screenshotManager.getScreenshot()
+            .crop(transform.toImage(this))
+            .threshold(0.5)
+            .use { binary ->
+                highlight(this, HighlightColor.Info)
+                val needW = template.width + 1
+                val needH = template.height + 1
+                val needsResize = binary.width < needW || binary.height < needH
+                if (!needsResize) {
+                    return binary.findMatches(template, similarity).any()
+                }
+                val targetSize = Size(
+                    maxOf(binary.width, needW),
+                    maxOf(binary.height, needH)
+                )
+                binary.resize(targetSize).use { resized ->
+                    return resized.findMatches(template, similarity).any()
+                }
+            }
+    }
+
     override fun Map<Pattern, Region>.exists(
         timeout: Duration, similarity: Double?, requireAll: Boolean,
     ) = imageMatcher.exists(
