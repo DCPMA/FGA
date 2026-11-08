@@ -62,6 +62,14 @@ interface AutomataApi {
 
     fun Region.detectText(outlinedText: Boolean = false): String
 
+    /**
+     * Checks whether this region's binarised content contains the given template.
+     * Does not fill outlined text: the template matches the thresholded pixels.
+     * Resizes the source up to fit if needed; callers should supply a template
+     * captured at the same image scale to avoid distorted source geometry.
+     */
+    fun Region.detectOutlinedTextHasMatch(template: Pattern, similarity: Double): Boolean
+
     fun Map<Pattern, Region>.exists(
         timeout: Duration = Duration.ZERO,
         similarity: Double? = null,
