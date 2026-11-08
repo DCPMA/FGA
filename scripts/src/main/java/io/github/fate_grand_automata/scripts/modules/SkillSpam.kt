@@ -29,14 +29,11 @@ class SkillSpam @Inject constructor(
         val skillReadyRecheckDelay = 0.1.seconds
         val cooldownRegex = Regex("""\d+""")
 
-        /**
-         * Similarity threshold for the `剩` cooldown-glyph template match.
-         * Validated empirically (Experiment D v3, see
-         * .auto-dev/investigation/ocr-report.md): 27/27 cells classified
-         * correctly across mixed-state captures with a safe margin of 0.092.
-         * 0.25 sits in the middle of the safe band 0.20..0.30.
-         */
-        const val COOLDOWN_GLYPH_SIMILARITY = 0.25
+        // Match the fixed TW 剩餘 prefix instead of recognizing a thin digit.
+        // The 34x18 template is captured at FGA's 1280x720 image scale.
+        // Offline 16:9 fixtures include cooldown 1 and ready skills; wider
+        // layouts and other TW UI versions still need target validation.
+        const val COOLDOWN_GLYPH_SIMILARITY = 0.60
     }
 
     fun spamSkills() {

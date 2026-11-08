@@ -126,7 +126,7 @@ class BattleScreenLocations @Inject constructor(
      */
     fun cooldownTextRegion(skill: Skill.Servant) =
         when (gameServer) {
-            is GameServer.Tw -> Region(-5, 40, 100, 55)
+            is GameServer.Tw -> Region(-80, 40, 180, 55)
             else -> Region(8, 108, 96, 48)
         } + locate(skill)
 
